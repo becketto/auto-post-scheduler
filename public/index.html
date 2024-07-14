@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>X Post Scheduler</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #000000;
+            color: #ffffff;
+        }
+
+        h1,
+        h2 {
+            color: #ffffff;
+            text-align: center;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 30px;
+        }
+
+        textarea {
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #333;
+            background-color: #151515;
+            color: #ffffff;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 10px;
+            background-color: #000000;
+            color: #ffffff;
+            border: 1px solid #ffffff;
+            cursor: pointer;
+            margin-bottom: 15px;
+            font-weight: bold;
+            font-size: 16px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        button:hover {
+            background-color: #ffffff;
+            color: #000000;
+        }
+
+        #characterCount {
+            text-align: right;
+            margin-top: -10px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #888;
+        }
+
+        #intervalControl {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        #intervalControl input {
+            width: 60px;
+            padding: 5px;
+            background-color: #151515;
+            color: #ffffff;
+            border: 1px solid #333;
+        }
+
+        #scheduledPosts {
+            border-top: 1px solid #333;
+            padding-top: 20px;
+        }
+
+        .scheduledPost {
+            background-color: #151515;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        .scheduledPost button {
+            margin-right: 10px;
+            padding: 5px 10px;
+            font-size: 14px;
+        }
+
+        #authButtons {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        #authButtons button {
+            margin: 0 10px;
+        }
+
+        #mainContent {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>X Post Scheduler</h1>
+    <div id="authButtons">
+        <a href="/auth/twitter"><button id="loginButton" type="button">Login with X</button></a>
+        <button id="logoutButton" type="button" style="display: none;">Logout</button>
+    </div>
+    <div id="mainContent">
+        <form id="postForm">
+            <textarea name="tweet" id="tweetContent" rows="4" maxlength="280"
+                placeholder="What's happening?"></textarea>
+            <div id="characterCount">0</div>
+            <div id="intervalControl">
+                <label for="interval">Interval (minutes):</label>
+                <input type="number" id="interval" name="interval" value="60" min="1">
+            </div>
+            <button type="submit">Schedule Post</button>
+        </form>
+
+        <h2>Scheduled Posts</h2>
+        <div id="scheduledPosts">
+            <!-- Scheduled posts will be dynamically added here -->
+        </div>
+    </div>
+
+    <script>
+        const loginButton = document.getElementById('loginButton');
+        const logoutButton = document.getElementById('logoutButton');
+        const mainContent = document.getElementById('mainContent');
+        const textarea = document.getElementById('tweetContent');
+        const charCount = document.getElementById('characterCount');
+        const postForm = document.getElementById('postForm');
+        const scheduledPostsContainer = document.getElementById('scheduledPosts');
+        let scheduledPosts = [];
+
+        function checkAuthStatus() {
+            fetch('/auth-status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.authenticated) {
+                        loginButton.style.display = 'none';
+                        logoutButton.style.display = 'inline-block';
+                        mainContent.style.display = 'block';
+                        loadScheduledPosts();
+                    } else {
+                        loginButton.style.display = 'inline-block';
+                        logoutButton.style.display = 'none';
+                        mainContent.style.display = 'none';
+                    }
+                });
+        }
+
+        logoutButton.addEventListener('click', function () {
+            fetch('/logout', { method: 'POST' })
+                .then(() => {
+                    checkAuthStatus();
+                });
+        });
+
+        textarea.addEventListener('input', function () {
+            charCount.textContent = this.value.length;
+        });
+
+        postForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const content = textarea.value;
+            const interval = document.getElementById('interval').value;
+            if (content) {
+                schedulePost(content, interval);
+                textarea.value = '';
+                charCount.textContent = '0';
+            }
+        });
+
+        function schedulePost(content, interval) {
+            fetch('/schedule', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content, interval })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    scheduledPosts.push({ ...data, content });
+                    displayScheduledPosts();
+                });
+        }
+
+        function loadScheduledPosts() {
+            fetch('/scheduled')
+                .then(response => response.json())
+                .then(posts => {
+                    scheduledPosts = posts;
+                    displayScheduledPosts();
+                });
+        }
+
+        function displayScheduledPosts() {
+            scheduledPostsContainer.innerHTML = '';
+            scheduledPosts.forEach(post => {
+                const postElement = document.createElement('div');
+                postElement.className = 'scheduledPost';
+                postElement.innerHTML = `
+                    <p>${post.content}</p>
+                    <p>Scheduled for: ${new Date(post.scheduledTime).toLocaleString()}</p>
+                    <button onclick="editPost(${post.id})">Edit</button>
+                    <button onclick="cancelPost(${post.id})">Cancel</button>
+                `;
+                scheduledPostsContainer.appendChild(postElement);
+            });
+        }
+
+        function editPost(id) {
+            const post = scheduledPosts.find(p => p.id === id);
+            if (post) {
+                textarea.value = post.content;
+                charCount.textContent = post.content.length;
+                cancelPost(id);
+            }
+        }
+
+        function cancelPost(id) {
+            fetch(`/scheduled/${id}`, { method: 'DELETE' })
+                .then(() => {
+                    scheduledPosts = scheduledPosts.filter(p => p.id !== id);
+                    displayScheduledPosts();
+                });
+        }
+
+        // Check auth status when the page loads
+        checkAuthStatus();
+    </script>
+</body>
+
+</html>
