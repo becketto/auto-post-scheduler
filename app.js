@@ -6,7 +6,7 @@ const session = require('express-session');
 require('dotenv').config();
 
 const app = express();
-const port = 3000;
+const port = 3001;
 
 // In-memory storage for scheduled posts (replace with a database in production)
 let scheduledPosts = [];
