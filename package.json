@@ -1,0 +1,16 @@
+{
+  "name": "x-post-scheduler",
+  "version": "1.0.0",
+  "description": "Scheduler for X (Twitter) posts",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "axios": "^0.21.1",
+    "body-parser": "^1.19.0",
+    "express-session": "^1.17.1",
+    "dotenv": "^8.2.0"
+  }
+}
