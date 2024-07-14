@@ -12,13 +12,15 @@ const port = 3001;
 let scheduledPosts = [];
 
 // Middleware
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(express.static('public'));
 app.use(session({
     secret: 'your_session_secret',
     resave: false,
     saveUninitialized: true,
+    cookie: {
+        secure: true, // for HTTPS
+        sameSite: 'none', // allows cross-site cookie setting
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
 }));
 
 function generateCodeVerifier() {

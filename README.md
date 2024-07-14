@@ -6,7 +6,7 @@
 2. **Create a new app**
 3. **Go to the app's settings**
 4. **Set up user auth settings:**
-    - Callback URL: `http://localhost:3000/callback`
+    - Callback URL: `http://localhost:3001/callback`
     - Website URL: Doesn't really matter
 5. **Create a `.env` file and add API keys:**
 
